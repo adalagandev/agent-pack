@@ -1,9 +1,21 @@
 # BUG.md — Backlog (agent-pack itself)
 
-Tracked work and defects as `SR-<n>` tickets for **this pack's own development**.
-Every commit's subject must start with the `SR-<n>` key of the ticket it advances —
-enforced by `.githooks/commit-msg`, which is the very hook this pack ships. The
-pack dogfoods its own workflow.
+Tracked work and defects as `AP-<n>` tickets for **this pack's own development**.
+Every commit's subject must start with the `AP-<n>` key of the ticket it advances —
+enforced by `.githooks/commit-msg`.
+
+> **Prefix history.** `AP` is for *agent-pack*. The pack was extracted from a
+> student-registration project whose tickets were keyed `SR-`, and that prefix
+> came along with it. `AP-1`…`AP-13` were renumbered from `SR-` in AP-14. `SR-0`
+> keeps its key because it is already committed history, and the `SR-19` / `SR-20`
+> references in `TEST.md` are origin-project bug IDs that name real regressions.
+
+> **The two hooks now differ.** `.githooks/commit-msg` (this repo, `AP-`) and
+> `payload/hooks/commit-msg` (installed into *target* projects, still `SR-`) were
+> byte-identical until AP-14 and no longer are. Shipping a hardcoded `SR-` to
+> unrelated projects is origin-project leakage — it belongs to AP-7, which will
+> make the prefix configurable per target. Until then the pack dogfoods the
+> *workflow* but not the literal hook file.
 
 > Not to be confused with `payload/templates/BUG.md`, which is the empty backlog
 > scaffolded into *target* projects. This file is never installed anywhere.
@@ -20,19 +32,20 @@ The `A<n>` / `B<n>` identifiers below refer to items in `TESTING-IMPROVEMENTS.pd
 | Ticket | Summary | Component | Difficulty | Status |
 |--------|---------|-----------|------------|--------|
 | SR-0 | Import agent-pack v1.0.0 under version control | repo | S | ✅ Done |
-| SR-1 | A3 — unit-test the commit hook as a pure function | hook | S | 🔲 Open |
-| SR-2 | A2 — express installer parity as a golden-tree diff | tests | M | 🔲 Open |
-| SR-3 | A1 — make the TS-\<n\> catalog executable | tests | L | 🔲 Open |
-| SR-4 | A5 — close the 8 open scenarios by blast radius | tests | L | 🔲 Open |
-| SR-5 | B2 — add integration-warden for the unowned test tier | agents | L | 🔲 Open |
-| SR-6 | B3 — move the curl document to controller-warden | agents | S | 🔲 Open |
-| SR-7 | B4 — strip origin-project details from the payload | agents | M | 🔲 Open |
-| SR-8 | B5 — add React/TypeScript testing examples | agents | M | 🔲 Open |
-| SR-9 | B6 — cross-cutting "changes ship with tests" rule | agents | S | 🔲 Open |
-| SR-10 | A4 — derive baseline counts instead of hardcoding them | tests | S | 🔲 Open |
-| SR-11 | A6 — add the negative path cases nobody wrote down | tests | M | 🔲 Open |
-| SR-12 | A7 — run the suite in CI across both platforms | ci | S | 🔲 Open |
-| SR-13 | Update the pack's own docs and cut v1.1.0 | docs | S | 🔲 Open |
+| AP-1 | A3 — unit-test the commit hook as a pure function | hook | S | 🔲 Open |
+| AP-2 | A2 — express installer parity as a golden-tree diff | tests | M | 🔲 Open |
+| AP-3 | A1 — make the TS-\<n\> catalog executable | tests | L | 🔲 Open |
+| AP-4 | A5 — close the 8 open scenarios by blast radius | tests | L | 🔲 Open |
+| AP-5 | B2 — add integration-warden for the unowned test tier | agents | L | 🔲 Open |
+| AP-6 | B3 — move the curl document to controller-warden | agents | S | 🔲 Open |
+| AP-7 | B4 — strip origin-project details from the payload | agents | M | 🔲 Open |
+| AP-8 | B5 — add React/TypeScript testing examples | agents | M | 🔲 Open |
+| AP-9 | B6 — cross-cutting "changes ship with tests" rule | agents | S | 🔲 Open |
+| AP-10 | A4 — derive baseline counts instead of hardcoding them | tests | S | 🔲 Open |
+| AP-11 | A6 — add the negative path cases nobody wrote down | tests | M | 🔲 Open |
+| AP-12 | A7 — run the suite in CI across both platforms | ci | S | 🔲 Open |
+| AP-13 | Update the pack's own docs and cut v1.1.0 | docs | S | 🔲 Open |
+| AP-14 | Adopt the `AP-` ticket prefix for this pack | repo | S | ✅ Done |
 
 ---
 
@@ -48,21 +61,25 @@ The `A<n>` / `B<n>` identifiers below refer to items in `TESTING-IMPROVEMENTS.pd
 - **Acceptance:** `git log` exists; `core.hooksPath` is `.githooks`; a non-`SR`
   commit is rejected in this repo.
 
-### SR-1 — A3: unit-test the commit hook as a pure function
+### AP-1 — A3: unit-test the commit hook as a pure function
 
 - **Type:** test
 - **Priority:** high
 - **Component:** hook
 - **Status:** 🔲 Open
-- **Description:** `payload/hooks/commit-msg` is stdin-file → exit code: no git
-  needed, milliseconds to run, table-driven. TS-10 covers only the happy path and
-  four exempt prefixes. Unguarded: lowercase `sr-1`, `SR-` with no digits, key
-  with no description, leading whitespace, empty/all-comment message, subject on
-  line 2, a body line that looks like `SR-1`, UTF-8 BOM, CRLF.
-- **Acceptance:** a table-driven case file covers every row; the hook is fixed
-  where the pinned behavior is wrong (whitespace trim, BOM strip, CR strip).
+- **Description:** the commit hook is stdin-file → exit code: no git needed,
+  milliseconds to run, table-driven. TS-10 covers only the happy path and four
+  exempt prefixes. Unguarded, stated prefix-neutrally (`<KEY>` is `AP` for
+  `.githooks/commit-msg`, `SR` for `payload/hooks/commit-msg`): lowercase
+  `<key>-1`, `<KEY>-` with no digits, key with no description, leading
+  whitespace, empty/all-comment message, subject on line 2, a body line that
+  looks like `<KEY>-1`, UTF-8 BOM, CRLF.
+- **Acceptance:** a table-driven case file covers every row; both hooks are run
+  against the same table with only the prefix parameterized, so the AP-14
+  divergence cannot hide a fix applied to one and not the other; the hooks are
+  fixed where the pinned behavior is wrong (whitespace trim, BOM strip, CR strip).
 
-### SR-2 — A2: express installer parity as a golden-tree diff
+### AP-2 — A2: express installer parity as a golden-tree diff
 
 - **Type:** test
 - **Priority:** high
@@ -75,7 +92,7 @@ The `A<n>` / `B<n>` identifiers below refer to items in `TESTING-IMPROVEMENTS.pd
 - **Acceptance:** the diff is empty for a default install and for `-Force` over an
   existing install; any divergence found is fixed in both scripts.
 
-### SR-3 — A1: make the TS-\<n\> catalog executable
+### AP-3 — A1: make the TS-\<n\> catalog executable
 
 - **Type:** test
 - **Priority:** high
@@ -88,7 +105,7 @@ The `A<n>` / `B<n>` identifiers below refer to items in `TESTING-IMPROVEMENTS.pd
 - **Acceptance:** `bash tests/run.sh` runs every scenario; failures are legible;
   no case leaks a temp directory.
 
-### SR-4 — A5: close the 8 open scenarios by blast radius
+### AP-4 — A5: close the 8 open scenarios by blast radius
 
 - **Type:** test
 - **Priority:** high
@@ -102,7 +119,7 @@ The `A<n>` / `B<n>` identifiers below refer to items in `TESTING-IMPROVEMENTS.pd
 - **Acceptance:** all 20 scenarios automated and green; statuses in `TEST.md`
   flipped only once the script passes.
 
-### SR-5 — B2: add integration-warden for the unowned test tier
+### AP-5 — B2: add integration-warden for the unowned test tier
 
 - **Type:** feature
 - **Priority:** high
@@ -116,7 +133,7 @@ The `A<n>` / `B<n>` identifiers below refer to items in `TESTING-IMPROVEMENTS.pd
 - **Acceptance:** `integration-warden.md` + java/python refs ship; routing table
   splits the two tiers; test-warden names the handoff target.
 
-### SR-6 — B3: move the curl document to controller-warden
+### AP-6 — B3: move the curl document to controller-warden
 
 - **Type:** chore
 - **Priority:** medium
@@ -129,7 +146,7 @@ The `A<n>` / `B<n>` identifiers below refer to items in `TESTING-IMPROVEMENTS.pd
 - **Acceptance:** the section lives in `controller-warden.md`, keyed to route
   changes; test-warden keeps a pointer.
 
-### SR-7 — B4: strip origin-project details from the payload
+### AP-7 — B4: strip origin-project details from the payload
 
 - **Type:** chore
 - **Priority:** medium
@@ -138,10 +155,26 @@ The `A<n>` / `B<n>` identifiers below refer to items in `TESTING-IMPROVEMENTS.pd
 - **Description:** `http://localhost:5000/api`, `backend-java/.../web`, and Flask
   `@app.route` examples are hardcoded in a pack that advertises framework-agnostic
   rules. Make them values the agent reads from the conventions section of `CLAUDE.md`.
+  Three more leaks found while doing AP-14, all of them the student-registration
+  origin showing through:
+  - `payload/hooks/commit-msg` hardcodes the `SR-` prefix, so every project that
+    installs the pack inherits another project's ticket convention. This is the
+    load-bearing one — the prefix is baked into the regex, the rejection message,
+    the installers, `templates/*`, and `ticket-warden.md`.
+  - `ticket-warden.md` tells the agent to match "the pattern already used by
+    SR-101/SR-102" and gives `SR-104-fix-email-save` as the branch example. Those
+    tickets exist only in the origin repo, so a target project is told to imitate
+    a backlog it has never had.
+  - `TEST.md` cites SR-19/SR-20 as regression-guard bug IDs. These are *fine* —
+    they name real historical bugs — but should be labeled as origin-project IDs
+    so nobody reads them as pack tickets.
 - **Acceptance:** no origin-specific path or port outside clearly-labeled example
-  blocks; `templates/CLAUDE.md` has a defined place for the answers.
+  blocks; `templates/CLAUDE.md` has a defined place for the answers; the ticket
+  prefix is a value the installer sets per target project rather than a literal
+  in the shipped hook; no dangling reference to a ticket that exists only in the
+  origin repo.
 
-### SR-8 — B5: add React/TypeScript testing examples
+### AP-8 — B5: add React/TypeScript testing examples
 
 - **Type:** feature
 - **Priority:** medium
@@ -154,7 +187,7 @@ The `A<n>` / `B<n>` identifiers below refer to items in `TESTING-IMPROVEMENTS.pd
 - **Acceptance:** a React examples file covering the same numbered rules, registered
   in test-warden's companion-file list.
 
-### SR-9 — B6: cross-cutting "changes ship with tests" rule
+### AP-9 — B6: cross-cutting "changes ship with tests" rule
 
 - **Type:** chore
 - **Priority:** medium
@@ -167,7 +200,7 @@ The `A<n>` / `B<n>` identifiers below refer to items in `TESTING-IMPROVEMENTS.pd
 - **Acceptance:** a Testing obligation subsection inside the installer-managed
   `CLAUDE.md` block, naming which tier applies and who to hand off to.
 
-### SR-10 — A4: derive baseline counts instead of hardcoding them
+### AP-10 — A4: derive baseline counts instead of hardcoding them
 
 - **Type:** test
 - **Priority:** medium
@@ -181,7 +214,7 @@ The `A<n>` / `B<n>` identifiers below refer to items in `TESTING-IMPROVEMENTS.pd
 - **Acceptance:** no hardcoded count in the harness; a warden added without a
   routing entry turns a test red.
 
-### SR-11 — A6: add the negative path cases nobody wrote down
+### AP-11 — A6: add the negative path cases nobody wrote down
 
 - **Type:** test
 - **Priority:** medium
@@ -194,7 +227,7 @@ The `A<n>` / `B<n>` identifiers below refer to items in `TESTING-IMPROVEMENTS.pd
 - **Acceptance:** TS-21…TS-24 exist in `TEST.md` and the harness; whatever they
   expose is fixed in both installers.
 
-### SR-12 — A7: run the suite in CI across both platforms
+### AP-12 — A7: run the suite in CI across both platforms
 
 - **Type:** chore
 - **Priority:** medium
@@ -205,7 +238,7 @@ The `A<n>` / `B<n>` identifiers below refer to items in `TESTING-IMPROVEMENTS.pd
 - **Acceptance:** the workflow runs `tests/run.sh` on push and PR and is green on
   both platforms.
 
-### SR-13 — Update the pack's own docs and cut v1.1.0
+### AP-13 — Update the pack's own docs and cut v1.1.0
 
 - **Type:** docs
 - **Priority:** low
@@ -215,8 +248,28 @@ The `A<n>` / `B<n>` identifiers below refer to items in `TESTING-IMPROVEMENTS.pd
   strategy. Reflect the new warden, the `tests/` harness, and CI; bump `VERSION`.
 - **Acceptance:** README matches the tree; `VERSION` is `1.1.0`.
 
+### AP-14 — Adopt the `AP-` ticket prefix for this pack
+
+- **Type:** chore
+- **Priority:** high
+- **Component:** repo
+- **Status:** ✅ Done
+- **Description:** the pack's own tickets were keyed `SR-`, inherited from the
+  student-registration project it was extracted from. `AP` is for *agent-pack*.
+  Renumber the 13 open tickets to `AP-1`…`AP-13` and switch
+  `.githooks/commit-msg` to enforce `AP-` only. Deliberately **not** changed:
+  `SR-0` (already committed history), the `SR-19`/`SR-20` origin bug IDs in
+  `TEST.md`, and everything under `payload/` — the shipped hook keeps `SR-` until
+  AP-7 makes it configurable, since `AP-` would be just as wrong for a target
+  project as `SR-` is.
+- **Acceptance:** `.githooks/commit-msg` accepts `AP-<n> x` and rejects
+  `SR-<n> x`; no `SR-<digits>` left in `BUG.md` except `SR-0`; `payload/` is
+  untouched; the divergence between the two hooks is written down.
+- **Fixed on branch:** master (direct, no branch — repo bootstrap era)
+- **Fixed at:** 2026-08-06
+
 <!-- Add new tickets by appending a table row above and a matching section here.
      On completion, flip the status to ✅ and record:
-       - **Fixed on branch:** SR-<n>-<desc>
+       - **Fixed on branch:** AP-<n>-<desc>
        - **Fixed at:** <timestamp>
 -->

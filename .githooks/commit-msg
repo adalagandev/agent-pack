@@ -1,12 +1,21 @@
 #!/bin/sh
 # @agent: ticket-warden
 #
-# commit-msg hook — the hard backstop for the SR-<n> ticket workflow.
+# commit-msg hook — the hard backstop for the AP-<n> ticket workflow.
 #
 # Policy ("prefix only"): every commit's SUBJECT LINE must start with a ticket
-# key of the form `SR-<number> ` followed by a description. Committing on
+# key of the form `AP-<number> ` followed by a description. Committing on
 # main/master is allowed — this hook does NOT guard the branch; it only
 # guarantees each commit is traceable to a ticket in BUG.md.
+#
+# `AP` is for agent-pack. This repo's tickets were keyed `SR-` (inherited from
+# the student-registration project the pack was extracted from) until AP-14.
+# SR-0 predates the switch and stays in history as-is.
+#
+# NOTE: this is the hook for THIS repo. Its sibling `payload/hooks/commit-msg`
+# is the one installed into target projects and still enforces `SR-`; the two
+# were byte-identical until AP-14. AP-7 makes the shipped prefix configurable,
+# after which both should be regenerated from one source.
 #
 # Exempt (git-generated or mechanical subjects that legitimately have no key):
 #   - merge commits             (Merge ...)
@@ -28,8 +37,8 @@ case "$subject" in
 		;;
 esac
 
-# Enforce: subject must be `SR-<digits> <something non-empty>`.
-if printf '%s' "$subject" | grep -Eq '^SR-[0-9]+ +\S'; then
+# Enforce: subject must be `AP-<digits> <something non-empty>`.
+if printf '%s' "$subject" | grep -Eq '^AP-[0-9]+ +\S'; then
 	exit 0
 fi
 
@@ -37,9 +46,10 @@ fi
 echo "commit-msg REJECTED: subject line must start with a ticket key." >&2
 echo "" >&2
 echo "  got:      $subject" >&2
-echo "  expected: SR-<n> <what the commit does>" >&2
-echo "  example:  SR-1 add the transactions screen" >&2
+echo "  expected: AP-<n> <what the commit does>" >&2
+echo "  example:  AP-1 unit-test the commit hook" >&2
 echo "" >&2
-echo "  Every commit must trace to an SR-<n> ticket in BUG.md." >&2
+echo "  Every commit must trace to an AP-<n> ticket in BUG.md." >&2
+echo "  (This repo switched SR- -> AP- in AP-14; SR-0 is pre-switch history.)" >&2
 echo "  (Merge/Revert/fixup!/squash! subjects are exempt.)" >&2
 exit 1
