@@ -1,0 +1,9 @@
+# Keep the shipped commit-msg hook and the bash installer as pure LF, so cloning
+# this pack on an autocrlf=true machine can't rewrite them to CRLF and break them
+# under `sh` before they are ever installed into a target project.
+payload/hooks/** text eol=lf
+*.sh text eol=lf
+# The harness runs under sh/bash on both platforms and asserts on byte-exact
+# trees, so its own files must not be CRLF-rewritten either.
+tests/** text eol=lf
+.githooks/** text eol=lf

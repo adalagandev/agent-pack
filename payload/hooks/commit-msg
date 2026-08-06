@@ -1,0 +1,45 @@
+#!/bin/sh
+# @agent: ticket-warden
+#
+# commit-msg hook — the hard backstop for the SR-<n> ticket workflow.
+#
+# Policy ("prefix only"): every commit's SUBJECT LINE must start with a ticket
+# key of the form `SR-<number> ` followed by a description. Committing on
+# main/master is allowed — this hook does NOT guard the branch; it only
+# guarantees each commit is traceable to a ticket in BUG.md.
+#
+# Exempt (git-generated or mechanical subjects that legitimately have no key):
+#   - merge commits             (Merge ...)
+#   - revert commits            (Revert ...)
+#   - fixup!/squash!/amend!     (rebase autosquash collapses these)
+#
+# Git passes the path to the commit message file as $1. We read only the first
+# non-comment, non-blank line (the subject) and match it against the pattern.
+
+msg_file="$1"
+
+# Extract the subject: first line that is neither blank nor a comment (#...).
+subject=$(grep -v '^#' "$msg_file" | grep -v '^[[:space:]]*$' | head -n 1)
+
+# Allow git-generated / mechanical subjects through untouched.
+case "$subject" in
+	"Merge "*|"Revert "*|"fixup! "*|"squash! "*|"amend! "*)
+		exit 0
+		;;
+esac
+
+# Enforce: subject must be `SR-<digits> <something non-empty>`.
+if printf '%s' "$subject" | grep -Eq '^SR-[0-9]+ +\S'; then
+	exit 0
+fi
+
+# Rejected — explain what's wrong and how to fix it, then fail the commit.
+echo "commit-msg REJECTED: subject line must start with a ticket key." >&2
+echo "" >&2
+echo "  got:      $subject" >&2
+echo "  expected: SR-<n> <what the commit does>" >&2
+echo "  example:  SR-1 add the transactions screen" >&2
+echo "" >&2
+echo "  Every commit must trace to an SR-<n> ticket in BUG.md." >&2
+echo "  (Merge/Revert/fixup!/squash! subjects are exempt.)" >&2
+exit 1
