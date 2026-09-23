@@ -1,10 +1,10 @@
 #!/bin/sh
 # @agent: ticket-warden
 #
-# commit-msg hook — the hard backstop for the SR-<n> ticket workflow.
+# commit-msg hook — the hard backstop for the <KEY>-<n> ticket workflow.
 #
 # Policy ("prefix only"): every commit's SUBJECT LINE must start with a ticket
-# key of the form `SR-<number> ` followed by a description. Committing on
+# key of the form `<KEY>-<number> ` followed by a description. Committing on
 # main/master is allowed — this hook does NOT guard the branch; it only
 # guarantees each commit is traceable to a ticket in BUG.md.
 #
@@ -15,6 +15,11 @@
 #
 # Git passes the path to the commit message file as $1. We read only the first
 # non-comment, non-blank line (the subject) and match it against the pattern.
+
+# This project's ticket key, written by the agent-pack installer. Re-running the
+# installer keeps it; pass --prefix / -Prefix to change it (that also updates
+# the Ticket workflow section of CLAUDE.md, which the agents read).
+TICKET_PREFIX='__TICKET_PREFIX__'
 
 msg_file="$1"
 
@@ -28,8 +33,8 @@ case "$subject" in
 		;;
 esac
 
-# Enforce: subject must be `SR-<digits> <something non-empty>`.
-if printf '%s' "$subject" | grep -Eq '^SR-[0-9]+ +\S'; then
+# Enforce: subject must be `<KEY>-<digits> <something non-empty>`.
+if printf '%s' "$subject" | grep -Eq "^${TICKET_PREFIX}-[0-9]+ +\\S"; then
 	exit 0
 fi
 
@@ -37,9 +42,9 @@ fi
 echo "commit-msg REJECTED: subject line must start with a ticket key." >&2
 echo "" >&2
 echo "  got:      $subject" >&2
-echo "  expected: SR-<n> <what the commit does>" >&2
-echo "  example:  SR-1 add the transactions screen" >&2
+echo "  expected: ${TICKET_PREFIX}-<n> <what the commit does>" >&2
+echo "  example:  ${TICKET_PREFIX}-1 add the login form" >&2
 echo "" >&2
-echo "  Every commit must trace to an SR-<n> ticket in BUG.md." >&2
+echo "  Every commit must trace to a ${TICKET_PREFIX}-<n> ticket in BUG.md." >&2
 echo "  (Merge/Revert/fixup!/squash! subjects are exempt.)" >&2
 exit 1

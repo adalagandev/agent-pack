@@ -2,7 +2,7 @@
 
 A self-contained, standalone bundle of specialist **`-warden`** subagents for
 [Claude Code](https://docs.claude.com/en/docs/claude-code/overview), the
-CLAUDE.md delegation mapping, starter governing docs, and the `SR-<n>` ticket
+CLAUDE.md delegation mapping, starter governing docs, and a `<KEY>-<n>` ticket
 commit hook — so **one command** bootstraps any project, brand-new or existing,
 ready to work in.
 
@@ -71,7 +71,7 @@ agent-pack/                        # this repo's root
     │   ├── BUG.md
     │   └── README.md
     ├── hooks/
-    │   └── commit-msg             # the SR-<n> ticket-prefix commit hook
+    │   └── commit-msg             # the <KEY>-<n> ticket-prefix commit hook
     └── claude-md-section.md       # the "Agent-driven development" block injected into CLAUDE.md
 ```
 
@@ -102,7 +102,7 @@ run them from wherever the pack lives.
 
 Point an installer at the new project's path with `--new` / `-New`. It runs
 `git init` for you, scaffolds the governing docs, installs the agents, and enables
-the `SR-<n>` commit hook — live in one command:
+the `<KEY>-<n>` commit hook — live in one command:
 
 **bash**
 ```bash
@@ -165,6 +165,7 @@ Open the project in Claude Code and run `/agents` to see the wardens.
 | `--new` | `-New` | `git init` the target first if it isn't a repo (no-op on an existing repo), so the hook is enabled automatically. |
 | `-f` / `--force` | `-Force` | Overwrite agent files that already exist (governing docs are **never** overwritten). |
 | `--no-hooks` | `-NoHooks` | Skip installing the commit-msg hook and setting `core.hooksPath`. |
+| `--prefix <KEY>` | `-Prefix <KEY>` | Ticket key for commits and `BUG.md` (e.g. `ACME` → `ACME-12`). Defaults to the key already installed, else one derived from the folder name — see [Choosing the ticket key](#notes). |
 | *(positional path)* | `-TargetRoot <path>` | Install target (defaults to current directory). |
 
 ## What it does
@@ -180,9 +181,10 @@ Open the project in Claude Code and run `/agents` to see the wardens.
    section between `<!-- BEGIN agent-pack -->` and `<!-- END agent-pack -->`
    markers. Re-running refreshes that block in place (idempotent) rather than
    duplicating it.
-4. **Installs the `SR-<n>` commit hook.** Copies `.githooks/commit-msg` into the
-   target and, when the target is a git repo, sets `core.hooksPath = .githooks`.
-   The hook rejects any commit whose subject isn't `SR-<n> <description>`
+4. **Installs the `<KEY>-<n>` commit hook.** Copies `.githooks/commit-msg` into the
+   target with your ticket key filled in and, when the target is a git repo, sets
+   `core.hooksPath = .githooks`.
+   The hook rejects any commit whose subject isn't `<KEY>-<n> <description>`
    (merge/revert/fixup!/squash! exempt; commits on `main` allowed). Skipped with
    `-NoHooks` / `--no-hooks`, or when the target isn't a git repo (then it's
    copied but not enabled — use `--new`/`-New` to `git init` first). `core.hooksPath`
@@ -193,20 +195,28 @@ Open the project in Claude Code and run `/agents` to see the wardens.
 
 ## Notes
 
-- **The rules are framework-agnostic; the examples are not.** Each agent's rules
-  are written to hold across languages/stacks, with concrete violation/correct
-  pairs in the companion `-refs/` files (Java / Python / React). The paths and
-  stack names are examples from this pack's origin project — adjust them to your
-  project's layout; you don't need to change the rules.
+- **The rules are framework-agnostic; the examples are illustrative.** Each
+  agent's rules hold across languages/stacks, with concrete violation/correct
+  pairs in the companion `-refs/` files (Java / Python / React). Agents take your
+  project's real locations — source roots, API module, route definitions, local
+  API base URL — from the **Project layout** section of `CLAUDE.md` (scaffolded
+  with placeholders; fill it in), and detect them from the codebase when it's
+  missing.
 - **ticket-warden is wired up by default.** The installer scaffolds a `BUG.md`
-  backlog and installs the `.githooks/commit-msg` backstop, so the `SR-<n>`
+  backlog and installs the `.githooks/commit-msg` backstop, so the `<KEY>-<n>`
   ticket workflow is active out of the box. Opt out of just the hook with
   `-NoHooks` / `--no-hooks`.
-- **The ticket prefix is currently fixed at `SR-`.** Once the hook is enabled,
-  every commit subject in the target must start with `SR-<number> ` (e.g.
-  `SR-1 add login form`). Making the prefix configurable per project is
-  planned. Until then, use `--no-hooks` / `-NoHooks` if you want a different
-  convention, or edit the prefix in `.githooks/commit-msg` after installing.
+- **Choosing the ticket key.** Once the hook is enabled, every commit subject in
+  the target must start with `<KEY>-<number> ` (e.g. `MSA-1 add login form`). The
+  installer picks `<KEY>` in this order and prints which it used:
+  1. `--prefix <KEY>` / `-Prefix <KEY>` — a letter then up to 9 letters/digits;
+  2. the key already installed in the target (so re-runs and upgrades from
+     v1.0, which used `SR`, keep theirs);
+  3. derived from the target folder name — initials of a multi-word name
+     (`my-shop-api` → `MSA`), else its first three letters (`billing` → `BIL`).
+
+  To change it later, re-run with `--prefix` / `-Prefix`; the hook and the
+  CLAUDE.md block are both rewritten.
 - **sync-warden keeps the project's own docs honest.** It reconciles `SPEC.md`,
   `CLAUDE.md`, and (if you keep one) `BUG.md` — moving coding rules or process
   that leak into the spec back to their proper home and keeping the routing table

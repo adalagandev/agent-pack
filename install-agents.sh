@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # install-agents.sh — bootstrap a project with this pack's `-warden` subagents,
-# governing docs, and the SR-<n> ticket commit hook.
+# governing docs, and the <KEY>-<n> ticket commit hook.
 #
 # Run from the ROOT of the target project, or pass the target root as an
 # argument. The script:
@@ -22,6 +22,11 @@
 #   ./install-agents.sh --new /path/to/new-project # git-init a brand-new project first
 #   ./install-agents.sh -f /path/to/project        # overwrite existing agents
 #   ./install-agents.sh --no-hooks                 # skip the commit-msg hook
+#   ./install-agents.sh --prefix ACME              # ticket key ACME-<n>
+#
+# Ticket key: --prefix wins; otherwise the key already installed in the target
+# is kept (hook, then CLAUDE.md); otherwise it is derived from the target folder
+# name (my-shop-api -> MSA, billing -> BIL).
 #
 set -euo pipefail
 
@@ -32,19 +37,35 @@ SECTION_FILE="$PACK_DIR/payload/claude-md-section.md"
 TEMPLATES_DIR="$PACK_DIR/payload/templates"
 HOOK_SRC="$PACK_DIR/payload/hooks/commit-msg"
 
-# --- args: optional target root + -f/--force + --no-hooks + --new ----------
+# --- args: optional target root + -f/--force + --no-hooks + --new + --prefix
 TARGET_ROOT="$PWD"
 FORCE=0
 NO_HOOKS=0
 NEW=0
-for arg in "$@"; do
-  case "$arg" in
+PREFIX=""
+while [ $# -gt 0 ]; do
+  case "$1" in
     -f|--force)     FORCE=1 ;;
     --no-hooks)     NO_HOOKS=1 ;;
     --new)          NEW=1 ;;
-    *)              TARGET_ROOT="$arg" ;;
+    --prefix)
+      if [ $# -lt 2 ]; then echo "ERROR: --prefix needs a value, e.g. --prefix ACME" >&2; exit 1; fi
+      PREFIX="$2"; shift ;;
+    --prefix=*)     PREFIX="${1#--prefix=}" ;;
+    *)              TARGET_ROOT="$1" ;;
   esac
+  shift
 done
+
+# A ticket key is a letter followed by up to 9 letters/digits; accept a trailing
+# dash ("SR-") and lowercase, and normalize both away.
+if [ -n "$PREFIX" ]; then
+  PREFIX="$(printf '%s' "${PREFIX%-}" | tr '[:lower:]' '[:upper:]')"
+  if ! printf '%s' "$PREFIX" | grep -Eq '^[A-Z][A-Z0-9]{0,9}$'; then
+    echo "ERROR: invalid --prefix '$PREFIX' (want a letter then up to 9 letters/digits, e.g. ACME)" >&2
+    exit 1
+  fi
+fi
 
 if [ ! -d "$PAYLOAD_AGENTS" ]; then
   echo "ERROR: bundled payload not found at $PAYLOAD_AGENTS" >&2
@@ -55,10 +76,51 @@ fi
 echo "Installing agent pack into: $TARGET_ROOT"
 mkdir -p "$TARGET_ROOT"
 
+# --- ticket key: flag > key already installed > derived from folder name ---
+# Print the key recorded in an existing hook: the TICKET_PREFIX line, or, for a
+# v1.0 hook that predates it, the literal key baked into the grep pattern.
+installed_hook_prefix() {
+  [ -f "$1" ] || return 0
+  p="$(sed -n "s/^TICKET_PREFIX='\([A-Z][A-Z0-9]*\)'.*/\1/p" "$1" | head -n 1)"
+  [ -n "$p" ] || p="$(sed -n "s/.*'^\([A-Z][A-Z0-9]*\)-\[0-9\]+.*/\1/p" "$1" | head -n 1)"
+  printf '%s' "$p"
+}
+# Print the key named in an existing agent-pack block ("tickets are `KEY-<n>`").
+installed_claude_prefix() {
+  [ -f "$1" ] || return 0
+  sed -n 's/.*[Tt]ickets are `\([A-Z][A-Z0-9]*\)-<n>`.*/\1/p' "$1" | head -n 1
+}
+# Initials of a multi-word folder name (max 4), else its first 3 characters.
+derive_prefix() {
+  set -- $(printf '%s' "$(basename "$1")" | tr -cs 'A-Za-z0-9' ' ')
+  if [ $# -ge 2 ]; then
+    p=""; for w in "$@"; do p="$p$(printf '%s' "$w" | cut -c1)"; done
+    p="$(printf '%s' "$p" | cut -c1-4)"
+  elif [ $# -eq 1 ]; then
+    p="$(printf '%s' "$1" | cut -c1-3)"
+  else
+    p=""
+  fi
+  p="$(printf '%s' "$p" | tr '[:lower:]' '[:upper:]')"
+  case "$p" in [A-Z]*) printf '%s' "$p" ;; *) printf 'TKT' ;; esac
+}
+
+if [ -n "$PREFIX" ]; then
+  PREFIX_FROM="--prefix"
+else
+  PREFIX="$(installed_hook_prefix "$TARGET_ROOT/.githooks/commit-msg")"; PREFIX_FROM="existing hook"
+  if [ -z "$PREFIX" ]; then PREFIX="$(installed_claude_prefix "$TARGET_ROOT/CLAUDE.md")"; PREFIX_FROM="existing CLAUDE.md"; fi
+  if [ -z "$PREFIX" ]; then PREFIX="$(derive_prefix "$(cd "$TARGET_ROOT" && pwd)")"; PREFIX_FROM="folder name; override with --prefix"; fi
+fi
+echo "  ticket key: $PREFIX ($PREFIX_FROM)"
+
+# Copy a payload file, filling in the ticket key placeholder.
+fill_prefix() { sed "s/__TICKET_PREFIX__/$PREFIX/g" "$1"; }
+
 # --- 0. --new: initialize a git repo if the target isn't one yet -----------
 # Opt-in for brand-new projects: this makes the target a repo up front, so the
 # hook step below (step 4) detects it and enables core.hooksPath automatically,
-# leaving the SR-<n> workflow live in one command. No-op on an existing repo.
+# leaving the <KEY>-<n> workflow live in one command. No-op on an existing repo.
 if [ "$NEW" -eq 1 ]; then
   if git -C "$TARGET_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "  git: already a repo (skipping init)"
@@ -76,7 +138,7 @@ for doc in CLAUDE.md SPEC.md BUG.md README.md; do
   if [ -f "$dest" ]; then
     echo "  keep (exists): $doc"
   elif [ -f "$src" ]; then
-    cp "$src" "$dest"
+    fill_prefix "$src" > "$dest"
     echo "  scaffolded:    $doc"
   fi
 done
@@ -114,7 +176,7 @@ awk '
 # Ensure exactly one blank line before the appended block (trailing blank lines
 # above were trimmed by the awk pass, so re-runs stay stable).
 printf '\n<!-- BEGIN agent-pack -->\n' >> "$tmp"
-cat "$SECTION_FILE" >> "$tmp"
+fill_prefix "$SECTION_FILE" >> "$tmp"
 printf '<!-- END agent-pack -->\n' >> "$tmp"
 
 mv "$tmp" "$CLAUDE_MD"
@@ -133,7 +195,7 @@ else
   mkdir -p "$HOOKS_DEST"
   # Strip CR so the hook is always pure LF, regardless of how the source was
   # checked out (a CRLF hook fails under sh: `#!/bin/sh\r` is not a valid path).
-  tr -d '\r' < "$HOOK_SRC" > "$HOOKS_DEST/commit-msg"
+  fill_prefix "$HOOK_SRC" | tr -d '\r' > "$HOOKS_DEST/commit-msg"
   chmod +x "$HOOKS_DEST/commit-msg"
   echo "  installed: .githooks/commit-msg"
   # Force LF on everything under .githooks so a clone/checkout under

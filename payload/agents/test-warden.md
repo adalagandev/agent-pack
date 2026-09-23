@@ -175,23 +175,25 @@ copy-paste way to exercise the live server.
   doesn't exist). Group commands by resource, one fenced `bash` block per command.
 - **Completeness is the point:** the file MUST list every endpoint the API currently
   exposes, not only the ones in your current change. Before finishing, enumerate the
-  actual routes (Grep the controllers / route definitions — e.g.
-  `@GetMapping`/`@PostMapping`/`@RequestMapping` in `backend-java/.../web`, or the
+  actual routes (Grep the controllers / route definitions named under **Project layout** in
+  `CLAUDE.md` — e.g. Spring `@GetMapping`/`@PostMapping`/`@RequestMapping`, or
   Flask `@app.route` decorators) and reconcile the file against them: add any missing
   endpoint, update any that changed, and NEVER delete a command for an endpoint that
   still exists.
 - **Each command includes:** the HTTP method + path, a one-line comment saying what
   it does and the expected status code, and a realistic example — JSON body for
   POST/PUT (`-H "Content-Type: application/json" -d '{...}'`), `-F` file parts for
-  multipart uploads. Use the base URL `http://localhost:5000/api`.
+  multipart uploads. Use the local API base URL from
+  **Project layout** in `CLAUDE.md`; if none is stated, derive it from the app's
+  config and note the assumption at the top of the file.
 - **Cover the verbs, not just GETs:** GET, POST, PUT, DELETE, and multipart uploads.
   For an endpoint with an important error contract, add a second curl showing the
   representative failure (e.g. a 400/404 with its `{"error": ...}` body).
 - **Additive updates:** when a new endpoint lands, append its curl(s); when one
   changes, edit it in place. Keep the file readable and grouped.
 - Put a short note at the top of the file that it is generated/maintained by the
-  `test-warden` agent, and keep commits to it prefixed with the active `SR-<n>`
-  ticket like any other change.
+  `test-warden` agent, and keep commits to it prefixed with the active ticket key
+  (`<KEY>-<n>`, see **Ticket workflow** in `CLAUDE.md`) like any other change.
 
 ## Authorship stamp
 

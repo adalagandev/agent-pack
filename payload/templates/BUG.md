@@ -1,8 +1,8 @@
 # BUG.md — Backlog
 
-Tracked work and defects as `SR-<n>` tickets. This is the authoritative backlog
+Tracked work and defects as `__TICKET_PREFIX__-<n>` tickets. This is the authoritative backlog
 **ticket-warden** and the `.githooks/commit-msg` hook rely on: every commit's
-subject must start with the `SR-<n>` key of the ticket it advances.
+subject must start with the `__TICKET_PREFIX__-<n>` key of the ticket it advances.
 
 > Scaffolded by agent-pack. Replace the example ticket with real ones; keep the
 > table + section format so ticket-warden can extend it consistently.
@@ -15,11 +15,11 @@ subject must start with the `SR-<n>` key of the ticket it advances.
 
 | Ticket | Summary | Component | Difficulty | Status |
 |--------|---------|-----------|------------|--------|
-| SR-1 | Scaffold the project skeleton | structure | S | 🔲 Open |
+| __TICKET_PREFIX__-1 | Scaffold the project skeleton | structure | S | 🔲 Open |
 
 ---
 
-### SR-1 — Scaffold the project skeleton
+### __TICKET_PREFIX__-1 — Scaffold the project skeleton
 
 - **Type:** chore
 - **Priority:** high
@@ -31,6 +31,6 @@ subject must start with the `SR-<n>` key of the ticket it advances.
 
 <!-- Add new tickets by appending a table row above and a matching section here.
      On completion, flip the status to ✅ and record:
-       - **Fixed on branch:** SR-<n>-<desc>
+       - **Fixed on branch:** __TICKET_PREFIX__-<n>-<desc>
        - **Fixed at:** <timestamp>
 -->

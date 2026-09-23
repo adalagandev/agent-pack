@@ -38,11 +38,23 @@ layer-level code shape, this file wins on project conventions and process.
      shape; these say which choice THIS project makes. E.g. money type, naming,
      validation strategy, commenting bar, test focus. -->
 
+## Project layout
+
+<!-- Where things live in THIS project. The wardens read these instead of
+     guessing; fill in what applies, delete what doesn't.
+- Backend source root:      e.g. backend/src/main/java/com/acme/app
+- Frontend source root:     e.g. frontend/src
+- Frontend API module:      e.g. frontend/src/api.js
+- Route definitions:        e.g. backend/.../web (Spring controllers) or app/routes.py
+- Entities / repositories:  e.g. backend/.../entity, backend/.../repository
+- Local API base URL:       e.g. http://localhost:8080/api
+-->
+
 ## Ticket workflow
 
-Code changes are tracked as `SR-<n>` tickets in `BUG.md`. A `.githooks/commit-msg`
+Code changes are tracked as `__TICKET_PREFIX__-<n>` tickets in `BUG.md`. A `.githooks/commit-msg`
 hook (installed by agent-pack) rejects any commit whose subject line is not
-`SR-<n> <description>`. Enable it in a fresh clone with:
+`__TICKET_PREFIX__-<n> <description>`. Enable it in a fresh clone with:
 
 ```sh
 git config core.hooksPath .githooks
