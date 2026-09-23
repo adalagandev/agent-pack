@@ -46,6 +46,7 @@ The `A<n>` / `B<n>` identifiers below refer to items in `TESTING-IMPROVEMENTS.pd
 | AP-12 | A7 — run the suite in CI across both platforms | ci | S | 🔲 Open |
 | AP-13 | Update the pack's own docs and cut v1.1.0 | docs | S | 🔲 Open |
 | AP-14 | Adopt the `AP-` ticket prefix for this pack | repo | S | ✅ Done |
+| AP-15 | Prepare the repo for public release on GitHub | repo | S | 🚧 In progress |
 
 ---
 
@@ -267,6 +268,23 @@ The `A<n>` / `B<n>` identifiers below refer to items in `TESTING-IMPROVEMENTS.pd
   untouched; the divergence between the two hooks is written down.
 - **Fixed on branch:** master (direct, no branch — repo bootstrap era)
 - **Fixed at:** 2026-08-06
+
+### AP-15 — Prepare the repo for public release on GitHub
+
+- **Type:** chore
+- **Priority:** high
+- **Component:** repo
+- **Status:** 🚧 In progress
+- **Description:** the pack is going public. Audit for sensitive data before the
+  first push, give it a license so others may legally use it, and make the
+  install steps usable by someone who has never seen the repo.
+- **Done so far:** secret/PII audit (no real secrets; warden examples like
+  `sk_live_5f3a...` are deliberate anti-patterns); commit author email rewritten
+  in history before first push; hardcoded local pack path in `TEST.md` replaced
+  with the clone root; MIT `LICENSE` added.
+- **Acceptance:** no secrets, personal emails, or machine-local paths in the tree
+  or history; `LICENSE` present; `README.md` has clone-and-install steps for
+  bash and PowerShell that work from a fresh clone.
 
 <!-- Add new tickets by appending a table row above and a matching section here.
      On completion, flip the status to ✅ and record:

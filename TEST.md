@@ -14,18 +14,18 @@ Status legend: 🔲 Untested · 🏗 Partial · ✅ Verified
 ## Conventions for running these
 
 All scenarios use a throwaway target dir and reference the pack by path. Set up a
-shell once:
+shell once, from the root of your clone of this repo:
 
 ```sh
 # bash / Git Bash
-PACK="D:/ai_personal_projects/agent-pack"                   # this pack (repo root)
+PACK="$(pwd)"                                               # this pack (repo root)
 crbytes() { tr -cd '\r' < "$1" | wc -c; }                    # CR bytes; 0 = pure LF
 newtgt()  { d="$(mktemp -d)"; echo "$d"; }                   # fresh empty dir
 ```
 
 ```powershell
 # Windows PowerShell 5.1 / PowerShell 7+
-$PACK = "D:\ai_personal_projects\agent-pack"
+$PACK = (Get-Location).Path                                    # this pack (repo root)
 function New-Tgt { $d = Join-Path $env:TEMP ("tgt-" + [guid]::NewGuid().ToString('N').Substring(0,8)); New-Item -ItemType Directory -Force $d | Out-Null; $d }
 function CrBytes($p) { ([System.IO.File]::ReadAllBytes($p) | Where-Object { $_ -eq 13 }).Count }
 ```
