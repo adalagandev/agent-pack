@@ -23,10 +23,11 @@ A feature that spans domains is split so each agent authors its own layer. When
 a change needs new files or a new module, **structure-warden** decides and
 creates *where* they live; the owning domain warden authors *what* goes inside.
 
-> The concrete paths, stacks, and framework names inside each agent file are
-> examples from the pack's origin project — the rules themselves are language/
-> framework-agnostic. Adjust those example paths to match this project's layout;
-> you do not need to change the rules.
+> The rules in each agent file are language/framework-agnostic; the paths and
+> framework names in their examples are illustrative only. Agents take this
+> project's real locations (source roots, API module, route definitions, local
+> API base URL) from a **Project layout** section in this file, and detect them
+> from the codebase — stating the assumption — when that section is absent.
 
 ### Authorship stamp
 
@@ -54,12 +55,16 @@ editing any of those files.
 ### Ticket workflow
 
 **ticket-warden** enforces a ticket-driven commit workflow, and the installer
-wires it up: tickets are `SR-<n>` entries in `BUG.md`, and a `.githooks/commit-msg`
+wires it up: tickets are `__TICKET_PREFIX__-<n>` entries in `BUG.md`, and a `.githooks/commit-msg`
 hook is installed with git pointed at it (`core.hooksPath = .githooks`). The hook
 is **prefix-only** — it rejects any commit whose subject line is not
-`SR-<n> <description>` (merge/revert/fixup!/squash! subjects are exempt) and does
+`__TICKET_PREFIX__-<n> <description>` (merge/revert/fixup!/squash! subjects are exempt) and does
 not police the branch, so committing on `main` is allowed. ticket-warden is the
 smart layer that makes the right ticket exist so commits pass.
+
+**Ticket key: `__TICKET_PREFIX__`.** Agent files write it generically as `<KEY>`. To
+change it, re-run the agent-pack installer with `--prefix <KEY>` / `-Prefix <KEY>`,
+which rewrites both the hook and this section.
 
 `core.hooksPath` lives in the local `.git/config`, which is not cloned, so each
 fresh clone must enable the hook once with `git config core.hooksPath .githooks`.

@@ -13,11 +13,11 @@ Early scaffold. See `SPEC.md` for what it will do and `BUG.md` for the backlog.
 - **`SPEC.md`** — what the app does (product spec).
 - **`CLAUDE.md`** — how work is organized, project conventions, and the
   `-warden` agent routing table.
-- **`BUG.md`** — the `SR-<n>` backlog.
+- **`BUG.md`** — the `__TICKET_PREFIX__-<n>` backlog.
 
 ## Development
 
-Code changes follow an `SR-<n>` ticket workflow (see `CLAUDE.md`). A committed
+Code changes follow a `__TICKET_PREFIX__-<n>` ticket workflow (see `CLAUDE.md`). A committed
 `.githooks/commit-msg` hook enforces ticket-prefixed commit subjects; enable it
 once per clone:
 

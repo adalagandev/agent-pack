@@ -1,7 +1,7 @@
 <#
 .SYNOPSIS
     Bootstrap a project with this pack's `-warden` subagents, governing docs,
-    and the SR-<n> ticket commit hook.
+    and the <KEY>-<n> ticket commit hook.
 
 .DESCRIPTION
     Run from the ROOT of the target project (or pass -TargetRoot). The script:
@@ -30,8 +30,15 @@
     Brand-new project: git-init the target first if it is not already a repo, so
     the hook step enables core.hooksPath automatically. No-op on an existing repo.
 
+.PARAMETER Prefix
+    Ticket key for the target, e.g. ACME for ACME-<n> commits. If omitted, the
+    key already installed in the target is kept (hook, then CLAUDE.md); otherwise
+    it is derived from the target folder name (my-shop-api -> MSA, billing -> BIL).
+
 .EXAMPLE
     ./install-agents.ps1
+.EXAMPLE
+    ./install-agents.ps1 -Prefix ACME
 .EXAMPLE
     ./install-agents.ps1 -New -TargetRoot C:\code\my-new-project
 .EXAMPLE
@@ -44,10 +51,60 @@ param(
     [string]$TargetRoot = (Get-Location).Path,
     [switch]$Force,
     [switch]$NoHooks,
-    [switch]$New
+    [switch]$New,
+    [string]$Prefix = ''
 )
 
 $ErrorActionPreference = 'Stop'
+
+# A ticket key is a letter followed by up to 9 letters/digits; accept a trailing
+# dash ("SR-") and lowercase, and normalize both away.
+if ($Prefix) {
+    $Prefix = $Prefix.TrimEnd('-').ToUpperInvariant()
+    if ($Prefix -cnotmatch '^[A-Z][A-Z0-9]{0,9}$') {
+        Write-Host "ERROR: invalid -Prefix '$Prefix' (want a letter then up to 9 letters/digits, e.g. ACME)" -ForegroundColor Red
+        exit 1
+    }
+}
+
+# Read payload/target text as UTF-8. Get-Content -Raw in Windows PowerShell 5.1
+# decodes BOM-less files as ANSI, which turned every em dash into mojibake.
+function Read-Utf8([string]$Path) { [System.IO.File]::ReadAllText($Path) }
+
+# Key recorded in an existing hook: the TICKET_PREFIX line, or, for a v1.0 hook
+# that predates it, the literal key baked into the grep pattern.
+function Get-InstalledHookPrefix([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path)) { return '' }
+    $text = Read-Utf8 $Path
+    $m = [regex]::Match($text, "(?m)^TICKET_PREFIX='([A-Z][A-Z0-9]*)'")
+    if (-not $m.Success) { $m = [regex]::Match($text, "'\^([A-Z][A-Z0-9]*)-\[0-9\]\+") }
+    if ($m.Success) { return $m.Groups[1].Value }
+    return ''
+}
+
+# Key named in an existing agent-pack block ("tickets are `KEY-<n>`").
+function Get-InstalledClaudePrefix([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path)) { return '' }
+    $m = [regex]::Match((Read-Utf8 $Path), '[Tt]ickets are `([A-Z][A-Z0-9]*)-<n>`')
+    if ($m.Success) { return $m.Groups[1].Value }
+    return ''
+}
+
+# Initials of a multi-word folder name (max 4), else its first 3 characters.
+function Get-DerivedPrefix([string]$Path) {
+    $words = @([regex]::Split((Split-Path -Leaf $Path), '[^A-Za-z0-9]+') | Where-Object { $_ })
+    if ($words.Count -ge 2) {
+        $p = -join ($words | ForEach-Object { $_.Substring(0, 1) })
+        if ($p.Length -gt 4) { $p = $p.Substring(0, 4) }
+    } elseif ($words.Count -eq 1) {
+        $p = $words[0].Substring(0, [Math]::Min(3, $words[0].Length))
+    } else {
+        $p = ''
+    }
+    $p = $p.ToUpperInvariant()
+    if ($p -cnotmatch '^[A-Z]') { $p = 'TKT' }
+    return $p
+}
 
 # Probe whether a path is inside a git work tree. On a non-repo, git writes to
 # stderr, which under $ErrorActionPreference='Stop' would surface as a terminating
@@ -74,11 +131,26 @@ if (-not (Test-Path -LiteralPath $PayloadAgents)) {
 
 Write-Host "Installing agent pack into: $TargetRoot" -ForegroundColor Cyan
 New-Item -ItemType Directory -Force -Path $TargetRoot | Out-Null
+$TargetRoot = (Resolve-Path -LiteralPath $TargetRoot).Path
+
+# --- ticket key: flag > key already installed > derived from folder name ---
+if ($Prefix) {
+    $PrefixFrom = '-Prefix'
+} else {
+    $Prefix = Get-InstalledHookPrefix (Join-Path $TargetRoot '.githooks/commit-msg'); $PrefixFrom = 'existing hook'
+    if (-not $Prefix) { $Prefix = Get-InstalledClaudePrefix (Join-Path $TargetRoot 'CLAUDE.md'); $PrefixFrom = 'existing CLAUDE.md' }
+    if (-not $Prefix) { $Prefix = Get-DerivedPrefix $TargetRoot; $PrefixFrom = 'folder name; override with -Prefix' }
+}
+Write-Host "  ticket key: $Prefix ($PrefixFrom)" -ForegroundColor Cyan
+
+# Payload text with the ticket key placeholder filled in.
+function Get-FilledPayload([string]$Path) { (Read-Utf8 $Path).Replace('__TICKET_PREFIX__', $Prefix) }
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 
 # --- 0. -New: initialize a git repo if the target isn't one yet ------------
 # Opt-in for brand-new projects: this makes the target a repo up front, so the
 # hook step below (step 4) detects it and enables core.hooksPath automatically,
-# leaving the SR-<n> workflow live in one command. No-op on an existing repo.
+# leaving the <KEY>-<n> workflow live in one command. No-op on an existing repo.
 if ($New) {
     if (Test-IsGitRepo $TargetRoot) {
         Write-Host "  git: already a repo (skipping init)" -ForegroundColor Yellow
@@ -96,7 +168,7 @@ foreach ($doc in @('CLAUDE.md', 'SPEC.md', 'BUG.md', 'README.md')) {
     if (Test-Path -LiteralPath $dest) {
         Write-Host "  keep (exists): $doc" -ForegroundColor Yellow
     } elseif (Test-Path -LiteralPath $src) {
-        Copy-Item -LiteralPath $src -Destination $dest
+        [System.IO.File]::WriteAllText($dest, (Get-FilledPayload $src), $utf8NoBom)
         Write-Host "  scaffolded:    $doc" -ForegroundColor Green
     }
 }
@@ -118,8 +190,8 @@ foreach ($item in Get-ChildItem -LiteralPath $PayloadAgents) {
 }
 
 # --- 3. Inject / refresh the CLAUDE.md section -----------------------------
-$content = Get-Content -LiteralPath $ClaudeMd -Raw
-$section = (Get-Content -LiteralPath $SectionFile -Raw).TrimEnd()
+$content = Read-Utf8 $ClaudeMd
+$section = (Get-FilledPayload $SectionFile).TrimEnd()
 $block   = "<!-- BEGIN agent-pack -->`n$section`n<!-- END agent-pack -->"
 
 $pattern = '(?s)<!-- BEGIN agent-pack -->.*?<!-- END agent-pack -->'
@@ -148,7 +220,7 @@ if ($NoHooks) {
     $HooksDest = Join-Path $TargetRoot '.githooks'
     New-Item -ItemType Directory -Force -Path $HooksDest | Out-Null
     # Write with LF line endings and no BOM - it runs under git's sh, not PowerShell.
-    $hookText = (Get-Content -LiteralPath $HookSrc -Raw) -replace "`r`n", "`n"
+    $hookText = (Get-FilledPayload $HookSrc) -replace "`r`n", "`n"
     [System.IO.File]::WriteAllText((Join-Path $HooksDest 'commit-msg'), $hookText, (New-Object System.Text.UTF8Encoding($false)))
     Write-Host "  installed: .githooks/commit-msg" -ForegroundColor Green
     # Force LF on everything under .githooks so a clone/checkout under
@@ -156,7 +228,6 @@ if ($NoHooks) {
     # Ensure the rule exists without clobbering an existing .gitattributes.
     $Ga = Join-Path $TargetRoot '.gitattributes'
     $GaRule = '.githooks/** text eol=lf'
-    $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
     if (-not (Test-Path -LiteralPath $Ga)) {
         [System.IO.File]::WriteAllText($Ga, "$GaRule`n", $utf8NoBom)
         Write-Host "  created: .gitattributes ($GaRule)" -ForegroundColor Green

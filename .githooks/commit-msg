@@ -1,21 +1,12 @@
 #!/bin/sh
 # @agent: ticket-warden
 #
-# commit-msg hook — the hard backstop for the AP-<n> ticket workflow.
+# commit-msg hook — the hard backstop for the <KEY>-<n> ticket workflow.
 #
 # Policy ("prefix only"): every commit's SUBJECT LINE must start with a ticket
-# key of the form `AP-<number> ` followed by a description. Committing on
+# key of the form `<KEY>-<number> ` followed by a description. Committing on
 # main/master is allowed — this hook does NOT guard the branch; it only
 # guarantees each commit is traceable to a ticket in BUG.md.
-#
-# `AP` is for agent-pack. This repo's tickets were keyed `SR-` (inherited from
-# the student-registration project the pack was extracted from) until AP-14.
-# SR-0 predates the switch and stays in history as-is.
-#
-# NOTE: this is the hook for THIS repo. Its sibling `payload/hooks/commit-msg`
-# is the one installed into target projects and still enforces `SR-`; the two
-# were byte-identical until AP-14. AP-7 makes the shipped prefix configurable,
-# after which both should be regenerated from one source.
 #
 # Exempt (git-generated or mechanical subjects that legitimately have no key):
 #   - merge commits             (Merge ...)
@@ -24,6 +15,11 @@
 #
 # Git passes the path to the commit message file as $1. We read only the first
 # non-comment, non-blank line (the subject) and match it against the pattern.
+
+# This project's ticket key, written by the agent-pack installer. Re-running the
+# installer keeps it; pass --prefix / -Prefix to change it (that also updates
+# the Ticket workflow section of CLAUDE.md, which the agents read).
+TICKET_PREFIX='AP'
 
 msg_file="$1"
 
@@ -37,8 +33,8 @@ case "$subject" in
 		;;
 esac
 
-# Enforce: subject must be `AP-<digits> <something non-empty>`.
-if printf '%s' "$subject" | grep -Eq '^AP-[0-9]+ +\S'; then
+# Enforce: subject must be `<KEY>-<digits> <something non-empty>`.
+if printf '%s' "$subject" | grep -Eq "^${TICKET_PREFIX}-[0-9]+ +\\S"; then
 	exit 0
 fi
 
@@ -46,10 +42,9 @@ fi
 echo "commit-msg REJECTED: subject line must start with a ticket key." >&2
 echo "" >&2
 echo "  got:      $subject" >&2
-echo "  expected: AP-<n> <what the commit does>" >&2
-echo "  example:  AP-1 unit-test the commit hook" >&2
+echo "  expected: ${TICKET_PREFIX}-<n> <what the commit does>" >&2
+echo "  example:  ${TICKET_PREFIX}-1 add the login form" >&2
 echo "" >&2
-echo "  Every commit must trace to an AP-<n> ticket in BUG.md." >&2
-echo "  (This repo switched SR- -> AP- in AP-14; SR-0 is pre-switch history.)" >&2
+echo "  Every commit must trace to a ${TICKET_PREFIX}-<n> ticket in BUG.md." >&2
 echo "  (Merge/Revert/fixup!/squash! subjects are exempt.)" >&2
 exit 1
