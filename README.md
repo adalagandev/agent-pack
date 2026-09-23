@@ -1,9 +1,40 @@
 # Agent Pack — portable `-warden` subagents
 
-A self-contained, standalone bundle of specialist **`-warden`** subagents, the
+A self-contained, standalone bundle of specialist **`-warden`** subagents for
+[Claude Code](https://docs.claude.com/en/docs/claude-code/overview), the
 CLAUDE.md delegation mapping, starter governing docs, and the `SR-<n>` ticket
 commit hook — so **one command** bootstraps any project, brand-new or existing,
 ready to work in.
+
+Each warden owns one layer of a codebase (services, persistence, controllers,
+exceptions, frontend, security, API clients, observability, config, tests,
+structure, tickets, docs) with numbered rules and violation/correct example
+pairs in Java, Python, and React. Claude Code delegates to them automatically
+through the routing table the installer writes into your project's `CLAUDE.md`.
+
+## Quick start
+
+```sh
+git clone https://github.com/adalagandev/agent-pack.git
+cd your-project
+bash ../agent-pack/install-agents.sh          # macOS / Linux / Git Bash
+```
+
+```powershell
+git clone https://github.com/adalagandev/agent-pack.git
+Set-Location your-project
+powershell -ExecutionPolicy Bypass -File ..\agent-pack\install-agents.ps1   # Windows
+```
+
+Then open the project in Claude Code and run `/agents` — the wardens are listed.
+Read on for brand-new projects, flags, and what gets written.
+
+## Requirements
+
+- **git** — the commit hook and `--new` / `-New` use it.
+- **bash** (macOS, Linux, or Git Bash on Windows) **or** Windows PowerShell 5.1 /
+  PowerShell 7+. Either installer alone is enough; they produce the same result.
+- **Claude Code**, to actually use the installed agents.
 
 This repository *is* the package: the two installers live at its root and carry
 everything they install under `payload/`. Clone it (or copy the folder) anywhere,
@@ -17,7 +48,7 @@ agent-pack/                        # this repo's root
 ├── install-agents.ps1             # installer (Windows PowerShell / PowerShell 7+)
 ├── install-agents.sh              # installer (bash / macOS / Linux / Git Bash)
 ├── README.md                      # this file
-├── TEST.md                        # TS-<n> installer test-scenario catalog (dev-only, not installed)
+├── LICENSE                        # MIT
 ├── VERSION                        # pack version
 └── payload/
     ├── agents/                    # the agent definitions that get installed
@@ -50,11 +81,20 @@ Clone the repo (or copy the folder) anywhere on disk — it does not need to liv
 inside the project you install into:
 
 ```sh
-git clone <repo-url> agent-pack
+git clone https://github.com/adalagandev/agent-pack.git
 ```
 
 The installers resolve their payload relative to their own location, so you can
 run them from wherever the pack lives.
+
+> **Windows: "running scripts is disabled on this system"?** PowerShell's default
+> execution policy blocks unsigned scripts. Either run the installer through
+> `powershell -ExecutionPolicy Bypass -File <path>\install-agents.ps1 <args>`
+> (affects only that one run — used in every PowerShell example below), or allow
+> local scripts for your user once with
+> `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`. If Windows marked the
+> files as downloaded (e.g. you got a ZIP instead of cloning), also run
+> `Get-ChildItem -Recurse <path>\agent-pack | Unblock-File`.
 
 ## Usage
 
@@ -66,12 +106,12 @@ the `SR-<n>` commit hook — live in one command:
 
 **bash**
 ```bash
-/path/to/agent-pack/install-agents.sh --new /path/to/my-new-project
+bash /path/to/agent-pack/install-agents.sh --new /path/to/my-new-project
 ```
 
 **PowerShell**
 ```powershell
-C:\path\to\agent-pack\install-agents.ps1 -New -TargetRoot C:\code\my-new-project
+powershell -ExecutionPolicy Bypass -File C:\path\to\agent-pack\install-agents.ps1 -New -TargetRoot C:\code\my-new-project
 ```
 
 ### Existing project
@@ -83,18 +123,40 @@ left untouched:
 **bash**
 ```bash
 cd /path/to/my-project
-/path/to/agent-pack/install-agents.sh                 # target = current dir
+bash /path/to/agent-pack/install-agents.sh            # target = current dir
 # or:
-/path/to/agent-pack/install-agents.sh /path/to/my-project
+bash /path/to/agent-pack/install-agents.sh /path/to/my-project
 ```
 
 **PowerShell**
 ```powershell
 Set-Location C:\code\my-project
-C:\path\to\agent-pack\install-agents.ps1              # target = current dir
+powershell -ExecutionPolicy Bypass -File C:\path\to\agent-pack\install-agents.ps1   # target = current dir
 # or:
-C:\path\to\agent-pack\install-agents.ps1 -TargetRoot C:\code\my-project
+powershell -ExecutionPolicy Bypass -File C:\path\to\agent-pack\install-agents.ps1 -TargetRoot C:\code\my-project
 ```
+
+### Check that it worked
+
+The installer prints one line per file and ends with `Done.`. In the target you
+should then have:
+
+- `.claude/agents/` — 13 `*-warden.md` files plus their `*-warden-refs/` folders
+- `CLAUDE.md` containing an `<!-- BEGIN agent-pack -->` … `<!-- END agent-pack -->` block
+- `SPEC.md`, `BUG.md`, `README.md` (only created if they were missing)
+- `.githooks/commit-msg`, and `git config core.hooksPath` printing `.githooks`
+
+Open the project in Claude Code and run `/agents` to see the wardens.
+
+### Updating and uninstalling
+
+- **Update:** `git pull` inside your agent-pack clone, then re-run the installer
+  with `-f` / `-Force`. Agents are overwritten with the new versions and the
+  CLAUDE.md block is refreshed in place; your governing docs are left alone.
+- **Uninstall:** delete `.claude/agents/*-warden*`, the agent-pack block in
+  `CLAUDE.md`, and `.githooks/commit-msg`, then run
+  `git config --unset core.hooksPath`. Keep or delete the scaffolded docs as you
+  like — they're ordinary files in your project.
 
 ### Flags
 
@@ -140,6 +202,11 @@ C:\path\to\agent-pack\install-agents.ps1 -TargetRoot C:\code\my-project
   backlog and installs the `.githooks/commit-msg` backstop, so the `SR-<n>`
   ticket workflow is active out of the box. Opt out of just the hook with
   `-NoHooks` / `--no-hooks`.
+- **The ticket prefix is currently fixed at `SR-`.** Once the hook is enabled,
+  every commit subject in the target must start with `SR-<number> ` (e.g.
+  `SR-1 add login form`). Making the prefix configurable per project is
+  planned. Until then, use `--no-hooks` / `-NoHooks` if you want a different
+  convention, or edit the prefix in `.githooks/commit-msg` after installing.
 - **sync-warden keeps the project's own docs honest.** It reconciles `SPEC.md`,
   `CLAUDE.md`, and (if you keep one) `BUG.md` — moving coding rules or process
   that leak into the spec back to their proper home and keeping the routing table
@@ -148,7 +215,8 @@ C:\path\to\agent-pack\install-agents.ps1 -TargetRoot C:\code\my-project
   there's none).
 - **Re-running is safe.** Agents already present are skipped unless you force,
   and the CLAUDE.md section is replaced in place.
-- **Installer test scenarios live in `TEST.md`.** A `TS-<n>` catalog of
-  hand-runnable checks (fresh bootstrap, `--new` git-init, partial installs,
-  hook/CRLF behavior, cross-platform parity) to re-verify after any change to
-  either installer.
+
+## License
+
+[MIT](LICENSE) — free to use, modify, and redistribute. Provided "as is", without
+warranty of any kind.

@@ -8,9 +8,15 @@ Thumbs.db
 # Machine-local tool state (permissions granted in one checkout, not the pack)
 .claude/settings.local.json
 
-# Throwaway install targets used when hand-running TEST.md scenarios
+# Throwaway install targets used when hand-testing the installers
 /tgt-*/
 /tmp-target/
 
 # Scratch space for the automated harness (one dir per case, torn down on exit)
 /tests/.tmp/
+
+# The pack's own dev docs (backlog, test catalog, proposals) stay local and are
+# not published. Root-anchored so payload/templates/BUG.md is still tracked.
+/BUG.md
+/TEST.md
+/TESTING-IMPROVEMENTS.pdf
